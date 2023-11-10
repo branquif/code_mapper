@@ -1,0 +1,36 @@
+[(binary_expression left: (_) right: (string_literal) @_str)
+ (binary_expression left: (string_literal) @_str right: (string_literal) @_str)
+ (field_declaration declarator: (variable_declarator value: (string_literal) @_str))
+]
+
+
+
+(field_declaration
+	type: (type_identifier) @_type (#eq "String")
+	declarator:
+	(variable_declarator name: (identifier) @str_name
+      value:
+          [
+          	(binary_expression left: (_) right: (string_literal) @str2)
+           	(string_literal) @str
+
+          ]
+	)
+)
+
+#single line string
+(field_declaration
+	type: (type_identifier) @_type (#eq "String")
+	declarator:
+	(variable_declarator name: (identifier) @str_name
+      value:
+           	(string_literal) @str
+	)
+)
+
+
+                                                                           right: string_literal [103, 12] - [103, 70]
+                                                                                                      right: string_literal [104, 12] - [104, 170]
+                                                                                                    right: string_literal [105, 12] - [105, 50]
+                                                                                                  right: field_access [105, 51] - [105, 76]
+                                                                                                    object: identifier [105, 51] - [105, 58]

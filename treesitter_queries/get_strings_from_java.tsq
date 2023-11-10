@@ -1,0 +1,42 @@
+# we need to validate the @var_name in the @a_var_name to make sure it is appending in the same var.
+# the string we need to replace all parts that are now within double quotes.
+
+[
+(
+	(local_variable_declaration
+		type: (type_identifier) @_ident (#eq? @_ident "StringBuilder")
+    	declarator: (variable_declarator
+    		name: (identifier) @var_name)
+	)
+	(expression_statement (method_invocation
+		object: (identifier) @a_var_name
+    	name: (identifier) @append (#eq? @append "append")
+    	arguments: (argument_list (string_literal)* @al)
+		)
+	)
+)
+(
+	(expression_statement (assignment_expression
+		left: (identifier) @id
+    	right: (object_creation_expression
+    		type: (type_identifier) @type (#eq? @type "StringBuilder")
+        )
+     ))
+     (expression_statement (method_invocation
+		object: (identifier) @a_var_name
+    	name: (identifier) @append (#eq? @append "append")
+    	arguments: (argument_list (string_literal)* @al)
+		)
+	)
+)
+(
+	(local_variable_declaration
+    	type: (type_identifier) @var_type (#eq? @var_type "String")
+        declarator: (variable_declarator
+        	name: (identifier) @str_name
+            value: (_) @str_value
+        )
+	)
+)
+
+]

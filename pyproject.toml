@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "code-mapper"
+version = "0.1.0"
+description = ""
+authors = ["branquif <branquif@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+antlr4-python3-runtime = "^4"
+tree-sitter = "^0"
+setuptools = "^68.2.2"
+sqlparse = "^0.4.4"
+javalang = "^0.13.0"
+plyj = "^0.1"
+tatsu = "^5.9.2"
+antlr4-tools = "^0.2"
+
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

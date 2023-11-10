@@ -1,0 +1,15 @@
+(class_declaration
+    (modifiers
+        (marker_annotation name: (identifier) @single_annotation)
+        (annotation
+          name: (identifier) @annotation-name
+          arguments: (annotation_argument_list
+            (element_value_pair
+              key: (identifier) @key
+              value: (string_literal) @value
+            )
+          )
+        )*
+    )
+    name: (identifier) @class_name
+)

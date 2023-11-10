@@ -1,0 +1,21 @@
+(interface_declaration
+	name: (identifier) @id_name
+	(extends_interfaces
+    	(interface_type_list
+        	(generic_type (type_identifier) @tpi
+            	(type_arguments
+                	(type_identifier) @tpai
+                )
+            )
+		)
+	)
+    body: (interface_body
+    	(method_declaration
+        	(modifiers
+            	(annotation name: (identifier) @mod_name
+                	arguments: (annotation_argument_list) @mod_args
+                )
+             )
+         )
+     )
+)
