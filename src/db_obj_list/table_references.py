@@ -4,13 +4,14 @@ from pathlib import Path
 from dataclasses import dataclass
 from metadata import *
 from db_object_read import *
-from typing import Set, List
+from typing import Set, List, Iterator
 
 
 @dataclass
 class TokenInfo:
-    #owner: str
-    token: str
+    owner: str
+    object_name: str
+    object_type: str
     line: str
     line_number: int
     file_path: str
@@ -18,79 +19,91 @@ class TokenInfo:
     repo_name: str
 
 
-def find_tokens_java(root_directory: Path, object_index: Set[CodeObject]) -> List[TokenInfo]:
-    # Prepare a pattern for regex that matches any of the tokens within double quotes
-    pattern = r'(?<=")[^"]*\b(?:' + '|'.join(re.escape(token.name) for token in object_index) + r')\b[^"]*(?=")'
-    #pattern = r'\b(' + '|'.join(re.escape(token.name) for token in object_index) + r')\b'
-    print(pattern)
+dq_string_pattern = re.compile(r'"(.*?)"')
+token_pattern = re.compile(r'[,;:\s]\s*')
 
-    # Prepare a list to store the results
+
+def read_file_with_fallback_encoding(file_path: Path, first_encoding='utf-8', fallback_encoding='windows-1252') -> str:
+    try:
+        return file_path.read_text(encoding=first_encoding)
+    except UnicodeDecodeError:
+        return file_path.read_text(encoding=fallback_encoding)
+
+
+def process_line(line: str, line_number: int, db_objects: Set[CodeObject], file_info: dict) -> List[TokenInfo]:
     results = []
-
-    # Iterate over all text files in the given directory and its subdirectories
-    for file_path in root_directory.glob('**/*.java'):
-        # Open each file and read it line by line
-        line_number = 0
-        with open(file_path, 'r', encoding='utf-8') as file:
-            for line in file:
-                line_number += 1
-                # Use regex to find all tokens within double quotes in the line
-                for match in re.findall(pattern, line):
-                    # If the line contains a token from the dictionary, create a dataclass instance
+    stripped_line = line.strip()
+    for dq_string in re.findall(dq_string_pattern, stripped_line):
+        for token in re.split(token_pattern, dq_string):
+            for db_object in db_objects:
+                if db_object.name.upper() == token.upper():
                     results.append(TokenInfo(
-                        token=match,
-                        line=line.strip(),
+                        owner=db_object.namespace,
+                        object_name=db_object.name,
+                        object_type=db_object.type.value,
+                        line=stripped_line,
                         line_number=line_number,
-                        file_path=str(file_path.parent),
-                        file_name=file_path.name,
-                        repo_name=root_directory.name))
+                        file_path=file_info['file_path'],
+                        file_name=file_info['file_name'],
+                        repo_name=file_info['repo_name']))
+    return results
 
+
+def find_tokens_java(root_directory: Path, object_index: Set[CodeObject]) -> List[TokenInfo]:
+    results = []
+    for file_path in root_directory.glob('**/*.java'):
+        file_info = {
+            'file_path': str(file_path.parent),
+            'file_name': file_path.name,
+            'repo_name': root_directory.name
+        }
+        file_content = read_file_with_fallback_encoding(file_path)
+        for line_number, line in enumerate(file_content.split('\n'), 1):
+            results.extend(process_line(line, line_number, object_index, file_info))
     return results
 
 
 def write_csv_from_token_info(token_info_list: List[TokenInfo], file_path: str):
-    # Define the field names for the CSV file
-    field_names = ['Token', 'Line', 'Line Number', 'File Path', 'File Name', 'Repo Name', 'Read', 'Modify']
+    field_names = ['Owner', 'Object Name', 'Object Type', 'Line', 'Line Number', 'File Path', 'File Name', 'Repo Name', 'Valid', 'Read', 'Write']
 
-    # Open the file in write mode and create a CSV writer
     with open(file_path, 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=field_names)
-
-        # Write the header row
         writer.writeheader()
-
-        # Write the data rows
         for token_info in token_info_list:
-            if token_info:
-                writer.writerow({
-                    'Token': token_info.token,
-                    'Line': token_info.line,
-                    'Line Number': token_info.line_number,
-                    'File Path': token_info.file_path,
-                    'File Name': token_info.file_name,
-                    'Repo Name': token_info.repo_name,
-                    'Read': '',
-                    'Modify': ''
-                })
+            writer.writerow({
+                'Owner': token_info.owner,
+                'Object Name': token_info.object_name,
+                'Object Type': token_info.object_type,
+                'Line': token_info.line,
+                'Line Number': token_info.line_number,
+                'File Path': token_info.file_path,
+                'File Name': token_info.file_name,
+                'Repo Name': token_info.repo_name,
+                'Valid': '',
+                'Read': '',
+                'Write': ''
+            })
 
 
-OBJECT_TYPES = {'TABLE'} #, 'VIEW', 'PROCEDURE', 'PACKAGE', 'TRIGGER', 'FUNCTION', 'MATERIALIZED_VIEW'}
-OWNERS = {'A_RAIABD', 'NFE'}
+# Rest of your code with the similar modular approach
 
-# OWNERS = {'A_RAIABD', 'NFE', 'SISBF', 'MSAF_DFE',
-#           'USR_ITIMPRO',  'USR_MS_ESTOQ', 'USR_MS_DESCON', 'USR_MAG', 'USR_MS_PAGTO',
-#           'USR_MS_PEDIDO', 'USR_MS_PEDSYNC', 'USR_MS_REMARCACAO', 'USR_MS_FARMPOPULAR',
-#           'USR_MS_PRECO', 'USR_MS_ASSINA', 'USR_MS_JOR_CONS', 'USRSICOFI', 'USR_QLIKVIEW', 'PRODUCAO', 'USR_MONITORRD',
-#           'USR_MS_WALLET', 'USR_MS_PEDIDO_PRD', 'USR_LGPD', 'USR_MS_ESTOQ_PRD', 'USR_MS_REMARCACAO_PRD', 'CONSULTA',
-#           'USR_MS_UNFIT_SYNC', 'USR_MS_PAGTO_PRD', 'USR_MS_DESCON_PRD', 'US_EXCRM', 'USR_MS_PEDSYNC_PRD',
-#           'USR_MS_ENTREGA', 'USR_MTZ', 'USR_MS_FARMPOPULAR_PRD', 'USR_MS_ASSINA_PRD', 'USR_MS_PRECO_PRD',
-#           'USR_MS_MKTP_FINANCEIRO', 'USR_MS_FUNCIONARIO', 'REMOTE_SCHEDULER_AGENT', 'USR_MS_MKTP_VENDEDOR',
-#           'USR_WORKFLOW', 'OUTLN', 'USR_MS_ENTREGA_PRD', 'USR_PRODMTZ', 'USR_MS_WALLET_PRD', 'DBSFWUSER', 'ORACLE_OCM',
-#           'USR_MS_UNFIT_CONS', 'USR_MS_OFERTA_SYNC', 'AS_TC', 'USR_MS_MEDICO', 'USR_MS_FIDELIDADE_SYNC',
-#           'CTMSERVICE', 'USR_MS_MKTP_INTEGRA', 'USR_MS_MKTP_VENDEDOR_PRD', 'USR_MS_FUNCIONARIO_PRD',
-#           'USR_MS_MKTP_FINANCEIRO_PRD', 'USR_ZABBIX_V8', 'USR_MS_MKTP_INTEGRA_PRD',  'AVUSER',
-#           'USR_MS_MEDICO_PRD', 'USROFERTAS', 'USR_MS_MKTP_CATALOGO', 'USR_MS_MKTP_PEDIDO', 'USR_DELPHIX',
-#           'USR_MS_MKTP_CATALOGO_PRD', 'USR_SOLIC', 'USR_MS_MKTP_PEDIDO_PRD', 'USR_DELPHIX2'}
+
+OBJECT_TYPES = {'TABLE', 'VIEW', 'PROCEDURE', 'PACKAGE', 'TRIGGER', 'FUNCTION', 'MATERIALIZED_VIEW'}
+
+OWNERS = {'A_RAIABD', 'NFE', 'SISBF', 'MSAF_DFE',
+          'USR_ITIMPRO', 'USR_MS_ESTOQ', 'USR_MS_DESCON', 'USR_MAG', 'USR_MS_PAGTO',
+          'USR_MS_PEDIDO', 'USR_MS_PEDSYNC', 'USR_MS_REMARCACAO', 'USR_MS_FARMPOPULAR',
+          'USR_MS_PRECO', 'USR_MS_ASSINA', 'USR_MS_JOR_CONS', 'USRSICOFI', 'USR_QLIKVIEW', 'PRODUCAO', 'USR_MONITORRD',
+          'USR_MS_WALLET', 'USR_MS_PEDIDO_PRD', 'USR_LGPD', 'USR_MS_ESTOQ_PRD', 'USR_MS_REMARCACAO_PRD', 'CONSULTA',
+          'USR_MS_UNFIT_SYNC', 'USR_MS_PAGTO_PRD', 'USR_MS_DESCON_PRD', 'US_EXCRM', 'USR_MS_PEDSYNC_PRD',
+          'USR_MS_ENTREGA', 'USR_MTZ', 'USR_MS_FARMPOPULAR_PRD', 'USR_MS_ASSINA_PRD', 'USR_MS_PRECO_PRD',
+          'USR_MS_MKTP_FINANCEIRO', 'USR_MS_FUNCIONARIO', 'REMOTE_SCHEDULER_AGENT', 'USR_MS_MKTP_VENDEDOR',
+          'USR_WORKFLOW', 'OUTLN', 'USR_MS_ENTREGA_PRD', 'USR_PRODMTZ', 'USR_MS_WALLET_PRD', 'DBSFWUSER', 'ORACLE_OCM',
+          'USR_MS_UNFIT_CONS', 'USR_MS_OFERTA_SYNC', 'AS_TC', 'USR_MS_MEDICO', 'USR_MS_FIDELIDADE_SYNC',
+          'CTMSERVICE', 'USR_MS_MKTP_INTEGRA', 'USR_MS_MKTP_VENDEDOR_PRD', 'USR_MS_FUNCIONARIO_PRD',
+          'USR_MS_MKTP_FINANCEIRO_PRD', 'USR_ZABBIX_V8', 'USR_MS_MKTP_INTEGRA_PRD', 'AVUSER',
+          'USR_MS_MEDICO_PRD', 'USROFERTAS', 'USR_MS_MKTP_CATALOGO', 'USR_MS_MKTP_PEDIDO', 'USR_DELPHIX',
+          'USR_MS_MKTP_CATALOGO_PRD', 'USR_SOLIC', 'USR_MS_MKTP_PEDIDO_PRD', 'USR_DELPHIX2'}
 
 
 def generate_object_index_keys(owners, object_types, origin):
@@ -113,12 +126,8 @@ if __name__ == '__main__':
 
     keys = generate_object_index_keys(OWNERS, OBJECT_TYPES, origin)
 
-    # a_raia_bd_table_item_key = ObjectIndexKey(origin=origin,
-    #                                           namespace="A_RAIABD",
-    #                                           type=OracleCodeObjectType.TABLE)
-
-
-    root_directory = Path("../../examples/PortalTC-Core-master")
+    # root_directory = Path("../../examples/PortalTC-Core-master")
+    root_directory = Path("../../examples/OMS")
     # root_directory = Path("../../examples/rd-estoque-master")
     result = []
     for owner in keys:
@@ -126,4 +135,6 @@ if __name__ == '__main__':
             print(keys[owner][obj_type])
             result.extend(find_tokens_java(root_directory, idx.get_item(keys[owner][obj_type])))
 
-    write_csv_from_token_info(result, '../../output/token_java.csv')
+    output_file_name = root_directory.name + '.csv'
+
+    write_csv_from_token_info(result, Path('../../output/' + output_file_name))
