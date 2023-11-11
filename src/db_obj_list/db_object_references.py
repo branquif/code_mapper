@@ -19,8 +19,29 @@ class TokenInfo:
     repo_name: str
 
 
-dq_string_pattern = re.compile(r'"(.*?)"')
+dq_string_pattern = re.compile(r'"(.*?)"')  # double quotes strings
+sq_string_pattern = re.compile(r"'(.*?)'")  # single quotes strings
+js_string_pattern = re.compile(r"('(?:\\.|[^\\'])*')|(\"(?:\\.|[^\\\"])*\")|(`(?:\\.|[^\\`])*`)")
+php_string_pattern = re.compile(r"('(?:\\.|[^\\'])*')|(\"(?:\\.|[^\\\"])*\")|(<<<[^\s]+[\s\S]*?^\2;?$)")
 token_pattern = re.compile(r'[,;:\s]\s*')
+
+
+def find_java_strings(text: str) -> List[str]:
+    return re.findall(dq_string_pattern, text)
+
+
+def find_sql_strings(text: str) -> List[str]:
+    return re.findall(dq_string_pattern, text)
+
+
+def find_php_strings(text: str) -> List[str]:
+    matches = php_string_pattern.findall(text)
+    return [string for group in matches for string in group if string]
+
+
+def find_js_strings(text: str) -> List[str]:
+    matches = js_string_pattern.findall(text)
+    return [string for group in matches for string in group if string]
 
 
 def read_file_with_fallback_encoding(file_path: Path, first_encoding='utf-8', fallback_encoding='windows-1252') -> str:
@@ -30,11 +51,12 @@ def read_file_with_fallback_encoding(file_path: Path, first_encoding='utf-8', fa
         return file_path.read_text(encoding=fallback_encoding)
 
 
-def process_line(line: str, line_number: int, db_objects: Set[CodeObject], file_info: dict) -> List[TokenInfo]:
+def process_line(line: str, line_number: int, db_objects: Set[CodeObject], file_info: dict, find_function) -> \
+        List[TokenInfo]:
     results = []
     stripped_line = line.strip()
-    for dq_string in re.findall(dq_string_pattern, stripped_line):
-        for token in re.split(token_pattern, dq_string):
+    for matches in find_function(stripped_line):
+        for token in re.split(token_pattern, matches):
             for db_object in db_objects:
                 if db_object.name.upper() == token.upper():
                     results.append(TokenInfo(
@@ -51,20 +73,32 @@ def process_line(line: str, line_number: int, db_objects: Set[CodeObject], file_
 
 def find_tokens_java(root_directory: Path, object_index: Set[CodeObject]) -> List[TokenInfo]:
     results = []
-    for file_path in root_directory.glob('**/*.java'):
+    for file_path in root_directory.glob('**/*'):
         file_info = {
             'file_path': str(file_path.parent),
             'file_name': file_path.name,
             'repo_name': root_directory.name
         }
+        match file_path.suffix.lower():
+            case '.java':
+                find_function = find_java_strings
+            case '.sql':
+                find_function = find_sql_strings
+            case '.php':
+                find_function = find_php_strings
+            case '.js':
+                find_function = find_js_strings
+            case _:
+                continue
         file_content = read_file_with_fallback_encoding(file_path)
         for line_number, line in enumerate(file_content.split('\n'), 1):
-            results.extend(process_line(line, line_number, object_index, file_info))
+            results.extend(process_line(line, line_number, object_index, file_info, find_function))
     return results
 
 
 def write_csv_from_token_info(token_info_list: List[TokenInfo], file_path: str):
-    field_names = ['Owner', 'Object Name', 'Object Type', 'Line', 'Line Number', 'File Path', 'File Name', 'Repo Name', 'Valid', 'Read', 'Write']
+    field_names = ['Owner', 'Object Name', 'Object Type', 'Line', 'Line Number', 'File Path', 'File Name', 'Repo Name',
+                   'Valid', 'Operation']
 
     with open(file_path, 'w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=field_names)
@@ -80,8 +114,7 @@ def write_csv_from_token_info(token_info_list: List[TokenInfo], file_path: str):
                 'File Name': token_info.file_name,
                 'Repo Name': token_info.repo_name,
                 'Valid': '',
-                'Read': '',
-                'Write': ''
+                'Operation': ''
             })
 
 
@@ -89,6 +122,7 @@ def write_csv_from_token_info(token_info_list: List[TokenInfo], file_path: str):
 
 
 OBJECT_TYPES = {'TABLE', 'VIEW', 'PROCEDURE', 'PACKAGE', 'TRIGGER', 'FUNCTION', 'MATERIALIZED_VIEW'}
+# OWNERS = {'A_RAIABD'}
 
 OWNERS = {'A_RAIABD', 'NFE', 'SISBF', 'MSAF_DFE',
           'USR_ITIMPRO', 'USR_MS_ESTOQ', 'USR_MS_DESCON', 'USR_MAG', 'USR_MS_PAGTO',
@@ -127,8 +161,10 @@ if __name__ == '__main__':
     keys = generate_object_index_keys(OWNERS, OBJECT_TYPES, origin)
 
     # root_directory = Path("../../examples/PortalTC-Core-master")
-    root_directory = Path("../../examples/OMS")
+    # root_directory = Path("../../examples/OMS")
+    # root_directory = Path("../../examples/ofex-master")
     # root_directory = Path("../../examples/rd-estoque-master")
+    root_directory = Path("../../examples/Emissor NFE")
     result = []
     for owner in keys:
         for obj_type in keys[owner]:
