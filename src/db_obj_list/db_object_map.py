@@ -83,10 +83,11 @@ def process_line(line: str, line_number: int, db_object_dict: Dict[str, Dict[str
                 continue
             for matches in find_function(stripped_line):
                 for token in re.split(token_pattern, matches):
-                    if token.upper() in name_obj:
+                    object_name = name_obj.get(token.upper(), None)
+                    if object_name:
                         results.append(TokenInfo(
                             owner=owner,
-                            object_name=name_obj[token.upper()].name,
+                            object_name=object_name.name,
                             object_type=db_type,
                             line=stripped_line,
                             line_number=line_number,
@@ -169,8 +170,8 @@ if __name__ == '__main__':
     # root_directory = Path("../../examples/PortalTC-Core-master")
     # root_directory = Path("../../examples/OMS")
     # root_directory = Path("../../examples/ofex-master")
-    # root_directory = Path("../../examples/rd-estoque-master")
-    root_directory = Path("../../examples/Emissor NFE")
+    root_directory = Path("../../examples/rd-estoque-master")
+    # root_directory = Path("../../examples/Emissor NFE")
     result = []
 
     result.extend(find_tokens(root_directory, db_object_dict))
