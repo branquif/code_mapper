@@ -1,0 +1,60 @@
+database_uri: 'sqlite:///../data/rd_dev.db'
+
+csv_files_info:
+  - csv_file: ../data/csv/TB_COMPONENT_TYPE.csv
+    separator: ';'
+    has_header: true
+    table_name: TB_COMPONENT_TYPE
+    column_mapping:
+      code: {name: code, type: String}
+      name: {name: name, type: String}
+
+  - csv_file: ../data/csv/TB_COMPONENT_TECH.csv
+    separator: ';'
+    has_header: true
+    table_name: TB_COMPONENT_TECH
+    column_mapping:
+      code: { name: code, type: String }
+      name: { name: name, type: String }
+
+  - csv_file: ../data/csv/TB_DOMAIN.csv
+    separator: ';'
+    table_name: TB_DOMAIN
+    has_header: true
+    column_order: [code, name, description, parent_code]
+    column_mapping:
+      code: {name: code, type: String}
+      name: {name: name, type: String}
+      description: {name: description, type: String}
+      parent_code: {name: parent_code, type: String}
+
+
+  - csv_file: ../data/csv/TB_CODE_OBJECT.csv
+    separator: ';'
+    table_name: TB_CODE_OBJECT
+    has_header: true
+    column_mapping:
+      code: { name: code, type: String }
+      name: { name: name, type: String }
+      system_component_code: { name: component_code, type: String }
+      type: { name: type_code, type: String }
+      source_file: { name: source_file, type: String }
+
+  - csv_file: ../data/csv/TB_MAP.csv
+    separator: ';'
+    table_name: TB_MAP
+    has_header: true
+    exclude_columns: [ 'code'] # List of columns to exclude
+    column_mapping:
+      from: { name: from_code, type: String }
+      to: { name: to_code, type: String }
+      map_type: { name: map_type, type: String }
+      db_operation: { name: db_operation, type: String }
+      integration_style: { name: integration_style, type: String }
+      integration_volume: { name: integration_volume, type: String }
+      start_type: { name: start_time, type: String }
+      line_text: { name: line_text, type: String }
+      duration: { name: duration, type: Integer }
+      line_number: { name: line_number, type: Integer }
+      file_path: { name: file_path, type: String }
+      file_name: { name: file_name, type: String }

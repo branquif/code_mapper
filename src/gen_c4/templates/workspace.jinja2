@@ -1,0 +1,42 @@
+workspace {{ ws_name }}  {{ ws_description }}{
+    model {
+      properties {
+                "structurizr.groupSeparator" "/"
+            }
+        {% for domain in domains %}
+        {{ domain.code }} = Group {{ domain.name }} {
+
+            {% for component in domain.components %}
+            {{ component.code }} = Component {{ component.name }} {
+                {% for element in component.elements %}
+                {{ element.code }} = {{ element.type }} {{ element.name }} "{{ element.description }}"
+                {% endfor %}
+            }
+            {% endfor %}
+        }
+        {% endfor %}
+        {% for element in elements %}
+        {% for field in fields %}
+        {{ field.name }} {{ field.type }} {{ field.description }}
+        {% endfor %}
+    }
+    {% for method in methods %}
+}
+
+
+<head>
+    <title>{{ title }}</title>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    {% if items %}
+        <ul>
+        {% for item in items %}
+            <li>{{ item|upper }}</li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No items available.</p>
+    {% endif %}
+</body>
+</html>
