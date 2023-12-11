@@ -168,3 +168,12 @@ cython_debug/
 /output/OMS.csv
 /examples/a_raiabd/
 /examples/ofex-master/
+/data/csv/TB_CODE_OBJECT.csv
+/data/csv/TB_COMPONENT.csv
+/data/csv/TB_COMPONENT_TECH.csv
+/data/csv/TB_COMPONENT_TYPE.csv
+/data/csv/TB_DOMAIN.csv
+/data/csv/TB_MAP.csv
+/data/csv/TB_OBJECT_TYPE.csv
+/data/rd.db
+/data/rd_dev.db

@@ -86,6 +86,7 @@ class CodeDbMapper:
                     self.db_object_dict[row['OWNER'].upper()][row['OBJECT_TYPE'].upper()] = set()
                 self.db_object_dict[row['OWNER'].upper()][row['OBJECT_TYPE'].upper()].add(row['OBJECT_NAME'].upper())
 
+
     def find_tokens(self, root_directory: Path) -> None:
         for file_path in root_directory.glob('**/*'):
             file_info = {
